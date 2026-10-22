@@ -35,7 +35,7 @@ The exact Python package list is in [`requirements.txt`](requirements.txt). The 
 
 ## Dataset and Database Schema
 
-[`data.csv`](data.csv) is a **tab-separated** file despite its `.csv` extension. It has **91 source records** plus a header. Each record contains customer and location fields alongside semicolon-separated lists of products, categories, descriptions, prices, quantities, and dates. The repository's `read_raw_data` function expands those lists into **621,806 parsed order-line tuples** before database-key matching and insertion. These are source/parser counts, not verified row counts in a live PostgreSQL database.
+[`data.csv`](data.csv) is a **tab-separated** file despite its `.csv` extension. It has **91 source records** plus a header. Each record contains customer and location fields alongside semicolon-separated lists of products, categories, descriptions, prices, quantities, and dates. The repository's `read_raw_data` function expands those lists into **621,806 parsed order-line tuples** before database-key matching and insertion. A local validation load also confirmed **621,806 rows** in PostgreSQL's `OrderDetail` table.
 
 | Source column | Meaning / loader behavior |
 | --- | --- |
@@ -48,7 +48,7 @@ The exact Python package list is in [`requirements.txt`](requirements.txt). The 
 | `QuantityOrderded` | Semicolon-separated quantities parsed as integers; spelling matches the source header |
 | `OrderDate` | Semicolon-separated dates; eight-digit `YYYYMMDD` strings become `YYYY-MM-DD` |
 
-The loader uses **column positions**, not the header text, and pairs list elements with `zip`. Invalid numeric entries are skipped; unmatched list lengths are truncated to the shortest input. It collects distinct region, country, customer, category, and product values, creates the tables below, then inserts order lines by looking up customer and product IDs. The parsed sets contain 9 regions, 21 country-region pairs, 91 customer tuples, 8 category tuples, and 77 product tuples; actual inserted counts have not been checked against a running database.
+The loader uses **column positions**, not the header text, and pairs list elements with `zip`. Invalid numeric entries are skipped; unmatched list lengths are truncated to the shortest input. It collects distinct region, country, customer, category, and product values, creates the tables below, then inserts order lines by looking up customer and product IDs. The parsed sets contain 9 regions, 21 country-region pairs, 91 customer tuples, 8 category tuples, and 77 product tuples; these counts were also confirmed in the local PostgreSQL validation load.
 
 | Table | Key fields | Relationship |
 | --- | --- | --- |
@@ -85,7 +85,7 @@ flowchart LR
     Loader --> DB
 ```
 
-The database loader and the web app are separate programs. `utils.py` reads `.env` for loader and connection-test scripts. The Streamlit app reads `st.secrets` for its database credentials, API key, and password hash.
+The database loader and the web app are separate programs. `utils.py` reads `.env` for loader and connection-test scripts. The Streamlit app reads database credentials and the password hash from `st.secrets`; it reads the OpenAI API key from `st.secrets` or `.env`.
 
 ## How the Application Works
 
@@ -100,7 +100,7 @@ The database loader and the web app are separate programs. `utils.py` reads `.en
 
 The app calls `client.chat.completions.create` with model **`gpt-4o-mini`** and temperature **0.1**. The prompt names each table and column, asks for quoted PostgreSQL identifiers and correct joins, defines revenue as `"QuantityOrdered" * "ProductUnitPrice"`, and asks for `LIMIT 100` on large results. These are **prompt instructions**, not enforced SQL rules. The schema text is maintained manually in `streamlit_app.py`; the app does not inspect the live database schema.
 
-The response is passed to `extract_sql_from_response`, which trims whitespace and attempts to strip Markdown SQL fences. Its current regular expression does not reliably remove fenced output. OpenAI request exceptions are shown in Streamlit and stop that generation attempt. Database exceptions are also displayed, but the app does not validate SQL syntax, limit queries in code, or restrict execution to `SELECT`. The edited SQL is sent to PostgreSQL with the configured account's permissions.
+The response is passed to `extract_sql_from_response`, which trims whitespace and strips a complete Markdown SQL fence when present. OpenAI request exceptions are shown in Streamlit and stop that generation attempt. Database exceptions are also displayed, but the app does not validate SQL syntax, limit queries in code, or restrict execution to `SELECT`. The edited SQL is sent to PostgreSQL with the configured account's permissions.
 
 ## Example Business Questions
 
@@ -129,11 +129,12 @@ AI-SQL-Assistant-Customer-Sales-Analytics/
 |-- requirements.txt                  Python dependencies
 |-- sample.env                        Configuration template
 |-- .gitignore                        Local secrets, environments, caches
+|-- output/                           UI screenshots, analytics image, and CSV summaries
 `-- .devcontainer/
     `-- devcontainer.json             Python development container and port forwarding
 ```
 
-No screenshots or saved query-result examples are checked into the repository.
+The `output/` images and CSV files document one local validation run; they are not generated automatically when the app starts.
 
 ## Installation and Prerequisites
 
@@ -163,7 +164,7 @@ python -m pip install -r requirements.txt
 
 ### Environment Variables
 
-[`sample.env`](sample.env) lists all six settings. The standalone scripts use `.env` through `python-dotenv`; the web app reads the same names from `.streamlit/secrets.toml` through `st.secrets`. Configure **both files** if you intend to run the loader/test scripts and the app. Both paths are ignored by Git.
+[`sample.env`](sample.env) lists all six settings. The standalone scripts use `.env` through `python-dotenv`; the web app reads database credentials and the login hash from `.streamlit/secrets.toml` through `st.secrets`. The app accepts `OPENAI_API_KEY` from Streamlit secrets or `.env`. Configure **both files** if you intend to run the loader/test scripts and the app. Both paths are ignored by Git.
 
 | Setting | Used by | Required for | Placeholder example |
 | --- | --- | --- | --- |
@@ -190,7 +191,7 @@ New-Item -ItemType Directory -Force .streamlit | Out-Null
 Copy-Item sample.env .streamlit/secrets.toml
 ```
 
-Fill in the four PostgreSQL settings in both files, and the API key and password hash in `.streamlit/secrets.toml`. The files can use different database accounts: the loader in `.env` needs schema-creation and insert privileges, while the app can use a read-only account. The quoted `KEY="value"` form in `sample.env` also works as TOML for the Streamlit secrets file. Run `python generate_password.py` to enter a login password interactively and copy **only the resulting bcrypt hash** into `HASHED_PASSWORD`. Keep both local configuration files private; never commit raw passwords or API keys.
+Fill in the four PostgreSQL settings in both files and the password hash in `.streamlit/secrets.toml`. Put `OPENAI_API_KEY` in either `.streamlit/secrets.toml` or `.env`. The files can use different database accounts: the loader in `.env` needs schema-creation and insert privileges, while the app can use a read-only account. The quoted `KEY="value"` form in `sample.env` also works as TOML for the Streamlit secrets file. Run `python generate_password.py` to enter a login password interactively and copy **only the resulting bcrypt hash** into `HASHED_PASSWORD`. Keep both local configuration files private; never commit raw passwords or API keys.
 
 ## Running the Application
 
@@ -227,31 +228,54 @@ The existing setup notes mention Render as one possible **PostgreSQL host**. The
 ## Testing and Validation
 
 - `python test_render_database.py` checks connectivity by running `SELECT version()`; it does not validate the schema or data.
-- After populating a disposable database, inspect the six tables and row counts with a PostgreSQL client, then run the app and test a simple question such as total sales revenue.
+- After populating a disposable database, inspect the six tables and row counts with a PostgreSQL client, then run the app and test a simple question such as total sales revenue. The local validation run below is an example.
 - Review the generated SQL before clicking **Run query** and compare its result with a hand-written SQL query for the same question.
 
 There is no automated test suite or recorded accuracy evaluation for natural-language-to-SQL generation in this repository.
 
 ## Results and Capabilities
 
-The code supports password-gated question entry, AI-generated SQL preview and editing, manual query execution, DataFrame display, and session query history. The checked-in dataset has **91 source records** and yields **621,806 parsed order-line tuples** through the loader, but no database snapshot or execution log verifies final inserted row counts. No query-generation accuracy, execution-success rate, response-time benchmark, saved result table, or screenshot is included.
+The code supports password-gated question entry, AI-generated SQL preview and editing, manual query execution, DataFrame display, and session query history. A local PostgreSQL load of the included dataset produced these verified row counts:
 
-Useful screenshots for this README would show the login screen, the question form with generated SQL, and a result table from a safe read-only query. They should be captured from a real app session with credentials and customer details hidden as appropriate.
+| Table | Rows |
+| --- | ---: |
+| `Region` | 9 |
+| `Country` | 21 |
+| `Customer` | 91 |
+| `ProductCategory` | 8 |
+| `Product` | 77 |
+| `OrderDetail` | 621,806 |
+
+One generated total-revenue query returned **458,003,714.3320379**, matching a separately written reference query. This is a single checked example, not an accuracy or performance benchmark. Revenue uses current product unit prices, as defined in the app prompt.
+
+### Screenshots and analytics output
+
+The login screenshot comes from the running app. For the authenticated screenshots, a temporary local capture session displayed the same app using the previously generated, verified SQL; clicking **Run query** fetched the displayed result from PostgreSQL. No additional OpenAI generation was used for these captures. The analytics summary is a separate, read-only validation report; its charts are not features of the Streamlit interface.
+
+| Login | SQL workspace |
+| --- | --- |
+| ![Streamlit password login screen](output/login-screen.png) | ![Question editor with saved generated SQL and history](output/sql-workspace.png) |
+
+![Total revenue query result in the Streamlit app](output/revenue-result.png)
+
+![Verified database counts, category revenue, and monthly order-line analytics](output/analytics-summary.png)
+
+The underlying summaries are in [`table-counts.csv`](output/table-counts.csv), [`category-revenue.csv`](output/category-revenue.csv), and [`monthly-order-lines-2015.csv`](output/monthly-order-lines-2015.csv). The [standalone HTML report](output/analytics-summary.html) offers a larger view of the charts.
 
 ## Limitations
 
 - The app depends on an external OpenAI API, and generated SQL may be invalid or answer the wrong question.
 - SQL execution is not restricted to read-only statements in code; the database account's privileges determine what can run.
-- The prompt's schema is hard-coded and can drift from the database. The Markdown-fence cleanup does not reliably remove fenced model output.
+- The prompt's schema is hard-coded and can drift from the database.
 - The loader aligns semicolon-separated lists with `zip`, silently skips invalid numeric values, and maps several records by non-unique names. These behaviors can affect imported data when names collide or list lengths differ.
 - The schema has no cost or historical sale-price field, so gross margin and historical price-based revenue cannot be established from it.
 - Login uses one shared password, and history disappears when the Streamlit session ends.
-- No automated tests, saved app screenshots, or measured NL-to-SQL quality metrics are provided.
+- No automated test suite or broad NL-to-SQL quality benchmark is provided; one verified question cannot establish general accuracy.
 
 ## Future Improvements
 
 - Add SQL parsing and read-only enforcement, a server-side row limit, and a least-privilege database role.
 - Validate source rows, report dropped records, and use stable source identifiers instead of name-based joins during loading.
-- Derive prompt schema from database metadata and improve response parsing and query-error recovery.
+- Derive prompt schema from database metadata and improve query-error recovery.
 - Add result visualizations, downloads, optional persistent history, and automated tests with a disposable PostgreSQL database.
 - Build a benchmark set of business questions and expected SQL/results to measure generation quality.

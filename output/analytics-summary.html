@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verified customer sales analytics</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #070d19; color: #eaf1fa; font: 16px Arial, sans-serif; }
+main { width: 1400px; min-height: 1020px; margin: auto; padding: 48px 64px 40px; background: radial-gradient(circle at 90% 0%,#172844 0%,#0b1425 35%,#070d19 75%); }
+.eyebrow { color: #6dd3ff; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+h1 { font-size: 42px; letter-spacing: -.03em; margin: 14px 0 8px; }
+.subtitle { color: #9aabc1; margin: 0 0 30px; }
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 30px; }
+.stat { padding: 22px 24px; border-radius: 17px; background: #121e31; border: 1px solid #25354e; }
+.stat small { color: #a7b5c8; display: block; margin-bottom: 13px; }
+.stat strong { color: #fff; display: block; font-size: 29px; }
+.stat em { color: #91a9be; display: block; font-size: 12px; font-style: normal; margin-top: 7px; }
+.panels { display: grid; grid-template-columns: 1.18fr .82fr; gap: 20px; }
+.panel { background: #101b2c; border: 1px solid #263951; border-radius: 18px; padding: 24px 26px 26px; }
+h2 { font-size: 22px; margin: 0 0 5px; }
+.panel p { font-size: 13px; color: #91a9be; margin: 0 0 24px; }
+.category-row { display: grid; grid-template-columns: 155px 1fr 72px; align-items: center; gap: 13px; margin: 15px 0; font-size: 14px; }
+.category-row span { white-space: nowrap; }
+.category-row strong { text-align: right; font-size: 13px; color: #dbeaff; }
+.track { height: 14px; border-radius: 8px; background: #233149; overflow: hidden; }
+.fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg,#23c8a3,#62d7ff); }
+.months { display: flex; align-items: end; justify-content: space-between; gap: 8px; height: 235px; padding: 8px 0 0; border-bottom: 1px solid #36506a; }
+.month { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: end; gap: 8px; height: 100%; }
+.month-count { color: #a9bad0; font-size: 10px; }
+.month-bar { width: 75%; min-height: 8px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg,#6b9bfa,#5572d9); }
+.month-name { color: #9eb2cc; font-size: 11px; margin-bottom: 5px; }
+.foot { border-top: 1px solid #25354e; color: #8da1b9; font-size: 12px; margin-top: 30px; padding-top: 16px; line-height: 1.5; }
+</style></head><body><main>
+<span class="eyebrow">Verified PostgreSQL output</span>
+<h1>Customer sales analytics</h1>
+<p class="subtitle">Read-only aggregation of the loaded six-table customer sales dataset</p>
+<div class="stats">
+<div class="stat"><small>Source records</small><strong>91</strong><em>Tab-separated source rows</em></div>
+<div class="stat"><small>Order lines loaded</small><strong>621,806</strong><em>Matched against every parsed line</em></div>
+<div class="stat"><small>Calculated revenue</small><strong>$458.00M</strong><em>Quantity × product unit price</em></div>
+<div class="stat"><small>Database tables</small><strong>6</strong><em>622,012 rows across all tables</em></div>
+</div>
+<div class="panels">
+<section class="panel"><h2>Revenue by product category</h2><p>All loaded order lines · USD, millions</p><div class="category-row"><span>Beverages</span><div class="track"><div class="fill" style="width:100.00%"></div></div><strong>$93.6M</strong></div>
+<div class="category-row"><span>Confections</span><div class="track"><div class="fill" style="width:72.08%"></div></div><strong>$67.5M</strong></div>
+<div class="category-row"><span>Meat/Poultry</span><div class="track"><div class="fill" style="width:71.48%"></div></div><strong>$66.9M</strong></div>
+<div class="category-row"><span>Dairy Products</span><div class="track"><div class="fill" style="width:63.38%"></div></div><strong>$59.3M</strong></div>
+<div class="category-row"><span>Condiments</span><div class="track"><div class="fill" style="width:60.87%"></div></div><strong>$57.0M</strong></div>
+<div class="category-row"><span>Seafood</span><div class="track"><div class="fill" style="width:54.56%"></div></div><strong>$51.1M</strong></div>
+<div class="category-row"><span>Produce</span><div class="track"><div class="fill" style="width:35.68%"></div></div><strong>$33.4M</strong></div>
+<div class="category-row"><span>Grains/Cereals</span><div class="track"><div class="fill" style="width:31.06%"></div></div><strong>$29.1M</strong></div></section>
+<section class="panel"><h2>2015 order-line activity</h2><p>Number of product lines dated in each month</p><div class="months"><div class="month"><span class="month-count">15,653</span><div class="month-bar" style="height:170.85px"></div><span class="month-name">Jan</span></div>
+<div class="month"><span class="month-count">12,806</span><div class="month-bar" style="height:139.78px"></div><span class="month-name">Feb</span></div>
+<div class="month"><span class="month-count">12,934</span><div class="month-bar" style="height:141.18px"></div><span class="month-name">Mar</span></div>
+<div class="month"><span class="month-count">15,059</span><div class="month-bar" style="height:164.37px"></div><span class="month-name">Apr</span></div>
+<div class="month"><span class="month-count">13,138</span><div class="month-bar" style="height:143.40px"></div><span class="month-name">May</span></div>
+<div class="month"><span class="month-count">14,608</span><div class="month-bar" style="height:159.45px"></div><span class="month-name">Jun</span></div>
+<div class="month"><span class="month-count">12,463</span><div class="month-bar" style="height:136.03px"></div><span class="month-name">Jul</span></div>
+<div class="month"><span class="month-count">15,484</span><div class="month-bar" style="height:169.01px"></div><span class="month-name">Aug</span></div>
+<div class="month"><span class="month-count">13,546</span><div class="month-bar" style="height:147.86px"></div><span class="month-name">Sep</span></div>
+<div class="month"><span class="month-count">13,313</span><div class="month-bar" style="height:145.31px"></div><span class="month-name">Oct</span></div>
+<div class="month"><span class="month-count">14,460</span><div class="month-bar" style="height:157.83px"></div><span class="month-name">Nov</span></div>
+<div class="month"><span class="month-count">16,491</span><div class="month-bar" style="height:180.00px"></div><span class="month-name">Dec</span></div></div></section>
+</div>
+<div class="foot">Derived directly from PostgreSQL with read-only SQL. Revenue uses the stored product unit price; the schema has no historical sale price. Charts are validation artifacts, not Streamlit app features.</div>
+</main></body></html>

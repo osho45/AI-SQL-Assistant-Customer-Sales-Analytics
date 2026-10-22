@@ -1,14 +1,19 @@
 import re
+from pathlib import Path
+
 import bcrypt
 import pandas as pd
 import streamlit as st
+from dotenv import dotenv_values
 from openai import OpenAI
 from sqlalchemy import create_engine, text
 
 
 st.set_page_config(page_title="SQL Copilot", page_icon="🛰️", layout="wide")
 
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or dotenv_values(
+    Path(__file__).with_name(".env")
+).get("OPENAI_API_KEY")
 HASHED_PASSWORD = st.secrets["HASHED_PASSWORD"].encode("utf-8")
 
 
@@ -93,7 +98,7 @@ def get_engine():
     password = st.secrets["POSTGRES_PASSWORD"]
     server = st.secrets["POSTGRES_SERVER"]
     database = st.secrets["POSTGRES_DATABASE"]
-    url = f"postgresql://{username}:{password}@{server}/{database}"
+    url = f"postgresql+psycopg2://{username}:{password}@{server}/{database}"
     return create_engine(url, pool_pre_ping=True, pool_recycle=3600)
 
 
@@ -112,7 +117,13 @@ def get_openai_client():
 
 
 def extract_sql_from_response(response_text):
-    return re.sub(r"^```sql\\s*|\\s*```$", "", response_text, flags=re.MULTILINE | re.IGNORECASE).strip()
+    sql_text = response_text.strip()
+    fenced = re.fullmatch(
+        r"```(?:sql)?[ \t]*\r?\n(.*?)\r?\n```",
+        sql_text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return fenced.group(1).strip() if fenced else sql_text
 
 
 def generate_sql_with_gpt(user_question):
